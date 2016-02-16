@@ -1,0 +1,36 @@
+from scrapy.spider import BaseSpider
+from scrapy.selector import HtmlXPathSelector
+from amazon.items import AmazonItem
+class AmazonSpider(BaseSpider):
+    name = "amazon" # Name of the spider, to be used when crawling
+    allowed_domains = ["amazon.com"] # Where the spider is allowed to go
+    start_urls = [
+       # "http://www.amazon.com/s/ref=s9_acss_bw_cg_BeautCat_2a1?rh=i%3Abeauty%2Cn%3A11060711&ie=UTF8&pf_rd_m=ATVPDKIKX0DER&pf_rd_s=merchandised-search-3&pf_rd_r=0SXC8J9FCK1GSH0SGKQK&pf_rd_t=101&pf_rd_p=2392863802&pf_rd_i=11060451"
+	"http://www.amazon.com/Golf-Clothing/b/ref=sv_sv_so_sprtfit_0?ie=UTF8&node=2371053011"
+    ]
+    def parse(self, response):
+        hxs = HtmlXPathSelector(response) # The XPath selector
+        sites = hxs.select('//li[contains(@class, "s-result-item  celwidget ")]/div[@class="s-item-container"]')
+        items = []
+        for site in sites:
+            item = AmazonItem()
+            item['description'] = site.select('div[@class="a-row a-spacing-mini"]/div[@class="a-row a-spacing-none"]/a/h2/text()').extract()
+	    data = site.select('div[@class="a-row"]/a/span[contains(@class, "a-size-base a-color-price s-price a-text-bold")]/text()').extract()
+	    if data:
+            	item['discount_price'] = data
+	    else:
+		item['discount_price'] = site.select('div[@class="a-row a-spacing-mini"]/div[@class="a-row a-spacing-none"]/a/span[contains(@class, "a-size-base a-color-price s-price a-text-bold")]/text()').extract()
+            #item['actual_price'] = site.select('div[@class="basic_stat product_score brief_metascore"]/div/div/span[contains(@class, "data metascore score")]/text()').extract()
+            item['shipping_description'] = site.select('div[@class="a-row a-spacing-top-mini a-spacing-mini"]/div[@class="a-row a-spacing-none"]/span[contains(@class, "a-color-secondary")]/text()').extract()
+	    brand = []
+	    brand = site.select('div[@class="a-row a-spacing-mini"]/div[@class="a-row a-spacing-mini"]/span[@class="a-size-small a-color-secondary"]/text()').extract()
+	    if brand:
+            	item['brand'] = [brand[1]]
+	    item['rating'] = site.select('div[@class="a-row a-spacing-none"]/span/span[@class="a-declarative"]/a/i[contains(@class, "a-icon a-icon-star a-star-4-5")]/span[contains(@class, "a-icon-alt")]/text()').extract()
+            item['review'] = site.select('div[@class="a-row a-spacing-none"]/a[@class="a-size-small a-link-normal a-text-normal"]/text()').extract()
+            items.append(item)
+        return items
+
+
+#scrapy crawl amazon -o amazon.json -t json
+#scrapy crawl amazon -o amazon.json -t csv
